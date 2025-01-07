@@ -50,3 +50,37 @@ if __name__ == "__main__":
     handler.fetch_and_parse('https://example.com')
     test_url = 'https://example.com/private'
     print(f"Access to {test_url}: {'Allowed' if handler.is_allowed(test_url) else 'Blocked'}")
+
+
+"""
+# Cache robots.txt for each domain to avoid repeated downloads.
+# Graceful fallback if robots.txt is unreachable.
+import requests
+from urllib.parse import urljoin, urlparse
+
+class RobotsHandler:
+    def __init__(self):
+        self.robots_cache = {}
+
+    def fetch(self, url):
+        domain = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+        robots_url = urljoin(domain, '/robots.txt')
+        if domain not in self.robots_cache:
+            try:
+                response = requests.get(robots_url, timeout=5)
+                self.robots_cache[domain] = response.text if response.status_code == 200 else ""
+            except requests.exceptions.RequestException:
+                self.robots_cache[domain] = ""
+        return self.robots_cache[domain]
+
+    def can_fetch(self, url):
+        domain = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
+        robots_txt = self.robots_cache.get(domain, "")
+        if "Disallow" in robots_txt:
+            disallowed_paths = [line.split(":")[1].strip() for line in robots_txt.split("\n") if line.startswith("Disallow")]
+            for path in disallowed_paths:
+                if urlparse(url).path.startswith(path):
+                    return False
+        return True
+
+"""

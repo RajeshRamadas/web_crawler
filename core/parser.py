@@ -37,3 +37,37 @@ if __name__ == "__main__":
     links, content = parser.parse(sample_html)
     print("Extracted Links:", links)
     print("Extracted Content:", content)
+
+
+"""
+# Robust link extraction to handle malformed URLs.
+# Content extraction refinement to filter irrelevant data (e.g., ads, scripts).
+# Structured data extraction with schema detection.
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+
+class Parser:
+    def __init__(self, base_url):
+        self.base_url = base_url
+
+    def parse(self, html):
+        soup = BeautifulSoup(html, 'html.parser')
+        links = self.extract_links(soup)
+        content = self.extract_content(soup)
+        return links, content
+
+    def extract_links(self, soup):
+        links = set()
+        for a_tag in soup.find_all('a', href=True):
+            full_url = urljoin(self.base_url, a_tag['href'])
+            if full_url.startswith("http"):
+                links.add(full_url)
+        return list(links)
+
+    def extract_content(self, soup):
+        for tag in soup(['script', 'style']):
+            tag.decompose()
+        paragraphs = soup.find_all('p')
+        content = '\n'.join([p.get_text() for p in paragraphs])
+        return content.strip()
+"""

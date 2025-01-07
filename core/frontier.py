@@ -34,3 +34,31 @@ if __name__ == "__main__":
     while frontier.size() > 0:
         next_url = frontier.get_next_url()
         print(f"Crawling: {next_url}")
+
+"""
+# Priority queue to prioritize URLs.
+# Deduplication to prevent repeated crawling.
+# Domain-based throttling to avoid penalization by certain domains.
+from queue import PriorityQueue
+from urllib.parse import urlparse
+
+class Frontier:
+    def __init__(self):
+        self.queue = PriorityQueue()
+        self.visited = set()
+        self.domain_delay = {}
+
+    def add_url(self, url, priority=1):
+        if url not in self.visited:
+            self.queue.put((priority, url))
+
+    def get_next_url(self):
+        if not self.queue.empty():
+            _, url = self.queue.get()
+            self.visited.add(url)
+            return url
+        return None
+
+    def is_visited(self, url):
+        return url in self.visited
+"""
