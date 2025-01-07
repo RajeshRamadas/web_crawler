@@ -1,8 +1,52 @@
 
 # Web Crawler Design
 
+# Web Crawler Project Structure
+
+This document provides an overview of the folder structure for the web crawler project.
+
 ## Folder Structure
-web_crawler/ ├── config/ │ ├── settings.py # Configuration settings (e.g., API keys, timeout, DB settings) │ ├── logger_config.py # Logging configuration │ └── init.py ├── core/ │ ├── init.py │ ├── downloader.py # Handles HTTP requests to fetch web pages │ ├── frontier.py # Manages the URL frontier (queue, deduplication, prioritization) │ ├── parser.py # Parses content, extracts data and links │ ├── scheduler.py # Orchestrates crawling logic and task distribution │ └── robots_handler.py # Fetches and respects robots.txt policies ├── db/ │ ├── storage.py # Manages storage of crawled data (e.g., raw HTML, metadata) │ ├── indexer.py # Indexing logic for search or analysis │ └── init.py ├── tests/ │ ├── test_downloader.py # Unit tests for downloader │ ├── test_frontier.py # Unit tests for URL frontier │ ├── test_parser.py # Unit tests for parser │ ├── test_scheduler.py # Unit tests for scheduler │ ├── test_robots_handler.py # Unit tests for robots.txt handler │ └── init.py ├── utils/ │ ├── logger.py # Utility for logging │ ├── url_utils.py # Utilities for URL normalization and validation │ └── init.py ├── scripts/ │ ├── seed_urls.py # Script to initialize seed URLs for the crawler │ ├── monitor.py # Script to monitor crawler performance │ └── init.py ├── docs/ │ ├── architecture.md # Documentation of the system design │ ├── usage.md # Instructions for using the crawler │ └── requirements.md # List of functional and non-functional requirements ├── main.py # Entry point for running the crawler ├── requirements.txt # Python dependencies └── README.md # Project overview and setup instructions
+
+```plaintext
+web_crawler/
+├── config/
+│   ├── settings.py            # Configuration settings (e.g., API keys, timeout, DB settings)
+│   ├── logger_config.py       # Logging configuration
+│   └── __init__.py
+├── core/
+│   ├── __init__.py
+│   ├── downloader.py          # Handles HTTP requests to fetch web pages
+│   ├── frontier.py            # Manages the URL frontier (queue, deduplication, prioritization)
+│   ├── parser.py              # Parses content, extracts data and links
+│   ├── scheduler.py           # Orchestrates crawling logic and task distribution
+│   └── robots_handler.py      # Fetches and respects robots.txt policies
+├── db/
+│   ├── storage.py             # Manages storage of crawled data (e.g., raw HTML, metadata)
+│   ├── indexer.py             # Indexing logic for search or analysis
+│   └── __init__.py
+├── tests/
+│   ├── test_downloader.py     # Unit tests for downloader
+│   ├── test_frontier.py       # Unit tests for URL frontier
+│   ├── test_parser.py         # Unit tests for parser
+│   ├── test_scheduler.py      # Unit tests for scheduler
+│   ├── test_robots_handler.py # Unit tests for robots.txt handler
+│   └── __init__.py
+├── utils/
+│   ├── logger.py              # Utility for logging
+│   ├── url_utils.py           # Utilities for URL normalization and validation
+│   └── __init__.py
+├── scripts/
+│   ├── seed_urls.py           # Script to initialize seed URLs for the crawler
+│   ├── monitor.py             # Script to monitor crawler performance
+│   └── __init__.py
+├── docs/
+│   ├── architecture.md        # Documentation of the system design
+│   ├── usage.md               # Instructions for using the crawler
+│   └── requirements.md        # List of functional and non-functional requirements
+├── main.py                    # Entry point for running the crawler
+├── requirements.txt           # Python dependencies
+└── README.md                  # Project overview and setup instructions
+
 
 ## Description of Key Folders
 
