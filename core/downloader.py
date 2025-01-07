@@ -18,7 +18,6 @@ Usage Example:
 This downloader can be used to extract links and content from any given web page.
 Rotating user agents prevents frequent blocking by server
 """
-
 import requests
 from urllib.parse import urljoin
 import time
@@ -27,7 +26,7 @@ from bs4 import BeautifulSoup
 
 
 class Downloader:
-    def __init__(self, user_agents=None, delay=1, timeout=10, retries=3):
+    def __init__(self, user_agents=None, delay=1, timeout=10, retries=3, verify_ssl=True):
         self.retries = retries
         self.delay = delay
         self.timeout = timeout
@@ -37,6 +36,7 @@ class Downloader:
             'WebCrawlerBot/1.0'
         ]
         self.current_agent_index = 0
+        self.verify_ssl = verify_ssl
 
     def get_user_agent(self):
         # Rotate user agents to prevent being blocked
@@ -48,7 +48,7 @@ class Downloader:
         headers = {"User-Agent": self.get_user_agent()}
         for attempt in range(self.retries):
             try:
-                response = requests.get(url, headers=headers, timeout=self.timeout)
+                response = requests.get(url, headers=headers, timeout=self.timeout, verify=self.verify_ssl)
                 response.raise_for_status()
                 time.sleep(self.delay)  # Rate limiting
                 return response.text
@@ -67,16 +67,19 @@ class Downloader:
 
 
 if __name__ == "__main__":
-    downloader = Downloader()
+    downloader = Downloader(verify_ssl=False)  # Disable SSL verification for testing
     start_url = 'https://www.livemint.com'
 
     # Fetch HTML content of the page
-    html_content = downloader.fetch(start_url)
-    print("Page HTML Content:")
-    print(html_content[:])  # Print first 500 characters of the HTML
+    try:
+        html_content = downloader.fetch(start_url)
+        print("Page HTML Content:")
+        print(html_content[:])  # Print first 500 characters of the HTML
 
-    # Fetch links from the page
-    links = downloader.fetch_links(start_url)
-    print("\nExtracted Links:")
-    for link in links:
-        print(link)
+        # Fetch links from the page
+        links = downloader.fetch_links(start_url)
+        print("\nExtracted Links:")
+        for link in links:
+            print(link)
+    except Exception as e:
+        print(f"Error: {e}")
