@@ -47,8 +47,8 @@ class RobotsHandler:
 
 if __name__ == "__main__":
     handler = RobotsHandler()
-    handler.fetch_and_parse('https://example.com')
-    test_url = 'https://example.com/private'
+    handler.fetch_and_parse('https://www.livemint.com/topic/davos-2023')
+    test_url = 'https://www.livemint.com/topic/davos-2023'
     print(f"Access to {test_url}: {'Allowed' if handler.is_allowed(test_url) else 'Blocked'}")
 
 
