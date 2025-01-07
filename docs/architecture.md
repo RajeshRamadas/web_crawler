@@ -1,10 +1,6 @@
 
 # Web Crawler Design
 
-# Web Crawler Project Structure
-
-This document provides an overview of the folder structure for the web crawler project.
-
 ## Folder Structure
 
 ```plaintext
@@ -47,6 +43,9 @@ web_crawler/
 ├── requirements.txt           # Python dependencies
 └── README.md                  # Project overview and setup instructions
 
+# Web Crawler Project Structure
+
+This document provides an overview of the folder structure for the web crawler project.
 
 ## Description of Key Folders
 
