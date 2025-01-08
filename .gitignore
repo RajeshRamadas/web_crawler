@@ -1,0 +1,24 @@
+# Ignore file for git
+
+# VS Code IDE
+.vscode/
+
+# Python virtual environment
+venv/
+
+# Python & Cython compiled files & pytest cache
+*.pyc
+*.pyo
+*.c
+*.pytestc
+.cache/
+.idea/
+*.html
+*.db
+
+# wheel build folders to ignore
+build/
+dist/
+*.egg-info/
+
+
