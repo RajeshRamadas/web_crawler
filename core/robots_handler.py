@@ -4,83 +4,73 @@ from urllib.parse import urljoin, urlparse
 class RobotsHandler:
     def __init__(self):
         self.rules = {}
+        self.robots_cache = {}
 
     def fetch_and_parse(self, base_url):
-        robots_url = urljoin(base_url, '/robots.txt')
+        domain = f"{urlparse(base_url).scheme}://{urlparse(base_url).netloc}"
+        robots_url = urljoin(domain, '/robots.txt')
+
+        if domain in self.robots_cache:
+            # Use cached rules if available
+            self.parse_rules(domain, self.robots_cache[domain])
+            return
+
         try:
             response = requests.get(robots_url, timeout=5)
             if response.status_code == 200:
-                self.parse_rules(base_url, response.text)
-        except requests.RequestException as e:
-            print(f"Failed to fetch robots.txt for {base_url}: {e}")
+                robots_text = response.text
+            else:
+                robots_text = ""
+        except requests.RequestException:
+            robots_text = ""
 
-    def parse_rules(self, base_url, robots_text):
+        # Cache robots.txt even if empty (to avoid repeated fetches)
+        self.robots_cache[domain] = robots_text
+        self.parse_rules(domain, robots_text)
+
+    def parse_rules(self, domain, robots_text):
         current_user_agent = None
-        parsed_url = urlparse(base_url).netloc
-        self.rules[parsed_url] = {}
+        self.rules[domain] = {}
 
         for line in robots_text.splitlines():
             line = line.strip()
             if line.startswith('#') or line == '':
                 continue
+
             if line.lower().startswith('user-agent:'):
                 current_user_agent = line.split(':', 1)[1].strip()
             elif line.lower().startswith('disallow:') and current_user_agent:
                 disallow_path = line.split(':', 1)[1].strip()
-                if current_user_agent not in self.rules[parsed_url]:
-                    self.rules[parsed_url][current_user_agent] = []
-                self.rules[parsed_url][current_user_agent].append(disallow_path)
+                if current_user_agent not in self.rules[domain]:
+                    self.rules[domain][current_user_agent] = []
+                self.rules[domain][current_user_agent].append(disallow_path)
 
     def is_allowed(self, url, user_agent='*'):
         parsed = urlparse(url)
-        netloc = parsed.netloc
+        domain = f"{parsed.scheme}://{parsed.netloc}"
         path = parsed.path or '/'
 
-        if netloc not in self.rules:
+        # If no rules are found, allow by default
+        if domain not in self.rules:
             return True
 
-        user_rules = self.rules[netloc].get(user_agent) or self.rules[netloc].get('*') or []
+        # Check for specific user-agent or fallback to '*'
+        user_rules = self.rules[domain].get(user_agent) or self.rules[domain].get('*') or []
         for rule in user_rules:
             if path.startswith(rule):
                 return False
         return True
 
+
 if __name__ == "__main__":
     handler = RobotsHandler()
-    handler.fetch_and_parse('https://www.livemint.com/topic/davos-2023')
-    test_url = 'https://www.livemint.com/topic/davos-2023'
-    print(f"Access to {test_url}: {'Allowed' if handler.is_allowed(test_url) else 'Blocked'}")
+    handler.fetch_and_parse('https://www.livemint.com')
 
+    test_urls = [
+        'https://www.livemint.com/topic/davos-2023',
+        'https://www.livemint.com/about',
+        'https://www.livemint.com/contact'
+    ]
 
-"""
-# Cache robots.txt for each domain to avoid repeated downloads.
-# Graceful fallback if robots.txt is unreachable.
-import requests
-from urllib.parse import urljoin, urlparse
-
-class RobotsHandler:
-    def __init__(self):
-        self.robots_cache = {}
-
-    def fetch(self, url):
-        domain = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
-        robots_url = urljoin(domain, '/robots.txt')
-        if domain not in self.robots_cache:
-            try:
-                response = requests.get(robots_url, timeout=5)
-                self.robots_cache[domain] = response.text if response.status_code == 200 else ""
-            except requests.exceptions.RequestException:
-                self.robots_cache[domain] = ""
-        return self.robots_cache[domain]
-
-    def can_fetch(self, url):
-        domain = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
-        robots_txt = self.robots_cache.get(domain, "")
-        if "Disallow" in robots_txt:
-            disallowed_paths = [line.split(":")[1].strip() for line in robots_txt.split("\n") if line.startswith("Disallow")]
-            for path in disallowed_paths:
-                if urlparse(url).path.startswith(path):
-                    return False
-        return True
-
-"""
+    for test_url in test_urls:
+        print(f"Access to {test_url}: {'Allowed' if handler.is_allowed(test_url) else 'Blocked'}")
