@@ -13,6 +13,8 @@ venv/
 *.pytestc
 .cache/
 .idea/
+*.html
+*.db
 
 # wheel build folders to ignore
 build/
