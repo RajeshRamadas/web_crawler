@@ -97,8 +97,11 @@ class Scheduler:
                     parser = Parser(next_url)
                     links, content, structured_data = parser.parse(html)
 
-                    # Save content and structured data to storage
-                    metadata = {"structured_data": structured_data}
+                    # Save content and structured data to storage (Database)
+                    metadata = {
+                        "structured_data": structured_data,
+                        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+                    }
                     self.storage.save_content(next_url, content, metadata)
 
                     # Add new links to the frontier

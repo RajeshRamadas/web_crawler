@@ -1,11 +1,13 @@
 import os
 import sqlite3
 from typing import Optional, Dict
+import json
 
 class Storage:
     def __init__(self, db_path="crawled_data.db", storage_dir="crawled"):
         self.db_path = db_path
         self.storage_dir = storage_dir
+        self._initialize_database()
 
         # Ensure storage directory exists
         if not os.path.exists(self.storage_dir):
@@ -36,26 +38,35 @@ class Storage:
                 cursor.execute("ALTER TABLE crawled_pages ADD COLUMN metadata TEXT")
             conn.commit()
 
-    def save_content(self, url: str, html: str, metadata: Optional[Dict] = None):
-        """Save the HTML content and metadata for a crawled URL."""
-        # Save HTML content to a file
-        sanitized_filename = url.replace("https://", "").replace("http://", "").replace("/", "_")
-        file_path = os.path.join(self.storage_dir, sanitized_filename + ".html")
-        with open(file_path, "w", encoding="utf-8") as file:
-            file.write(html)
-
-        # Save metadata to the database
-        metadata_str = str(metadata) if metadata else None
+    def _initialize_database(self):
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT OR IGNORE INTO crawled_pages (url, file_path, metadata)
-                VALUES (?, ?, ?)
-                """,
-                (url, file_path, metadata_str)
-            )
+            cursor.execute("""
+                   CREATE TABLE IF NOT EXISTS crawled_data (
+                       id INTEGER PRIMARY KEY AUTOINCREMENT,
+                       url TEXT UNIQUE,
+                       content TEXT,
+                       metadata TEXT,
+                       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                   )
+               """)
             conn.commit()
+
+    def save_content(self, url, content, metadata):
+        metadata_str = json.dumps(metadata)  # Convert metadata to JSON string
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute("""
+                       INSERT INTO crawled_data (url, content, metadata)
+                       VALUES (?, ?, ?)
+                   """, (url, content, metadata_str))
+                conn.commit()
+                print(f"Saved content for {url}")
+            except sqlite3.IntegrityError:
+                print(f"Duplicate entry. Content for {url} already exists.")
+            except Exception as e:
+                print(f"Error saving content for {url}: {e}")
 
     def get_metadata(self, url: str) -> Optional[Dict]:
         """Retrieve metadata for a given URL."""
@@ -83,15 +94,15 @@ class Storage:
             )
             return cursor.fetchall()
 
-if __name__ == "__main__":
-    storage = Storage()
-
-    # Example usage
-    test_url = "https://example.com"
-    test_html = "<html><body><h1>Example</h1></body></html>"
-    test_metadata = {"status": 200, "content_type": "text/html"}
-
-    storage.save_content(test_url, test_html, test_metadata)
-
-    print("Metadata:", storage.get_metadata(test_url))
-    print("Crawled Pages:", storage.list_crawled_pages())
+# if __name__ == "__main__":
+#     storage = Storage()
+#
+#     # Example usage
+#     test_url = "https://example.com"
+#     test_html = "<html><body><h1>Example</h1></body></html>"
+#     test_metadata = {"status": 200, "content_type": "text/html"}
+#
+#     storage.save_content(test_url, test_html, test_metadata)
+#
+#     print("Metadata:", storage.get_metadata(test_url))
+#     print("Crawled Pages:", storage.list_crawled_pages())

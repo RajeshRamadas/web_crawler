@@ -50,24 +50,24 @@ class Parser:
         parsed = urlparse(url)
         return bool(parsed.netloc) and parsed.scheme in ['http', 'https']
 
-if __name__ == "__main__":
-    sample_html = '''
-    <html>
-        <head>
-            <meta name="description" content="Sample page for testing.">
-            <script>console.log("This should not be extracted.")</script>
-        </head>
-        <body>
-            <p>This is a sample paragraph.</p>
-            <a href="/about">About Us</a>
-            <a href="https://malformed url">Malformed Link</a>
-            <a href="/contact">Contact</a>
-        </body>
-    </html>
-    '''
-    parser = Parser("https://www.livemint.com/")
-    links, content, structured_data = parser.parse(sample_html)
-    print("Extracted Links:", links)
-    print("Extracted Content:", content)
-    print("Extracted Structured Data:", structured_data)
+# if __name__ == "__main__":
+#     sample_html = '''
+#     <html>
+#         <head>
+#             <meta name="description" content="Sample page for testing.">
+#             <script>console.log("This should not be extracted.")</script>
+#         </head>
+#         <body>
+#             <p>This is a sample paragraph.</p>
+#             <a href="/about">About Us</a>
+#             <a href="https://malformed url">Malformed Link</a>
+#             <a href="/contact">Contact</a>
+#         </body>
+#     </html>
+#     '''
+#     parser = Parser("https://www.livemint.com/")
+#     links, content, structured_data = parser.parse(sample_html)
+#     print("Extracted Links:", links)
+#     print("Extracted Content:", content)
+#     print("Extracted Structured Data:", structured_data)
 

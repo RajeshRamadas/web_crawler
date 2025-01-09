@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup
 
 
 class Downloader:
-    def __init__(self, user_agents=None, delay=1, timeout=10, retries=3, verify_ssl=True):
+    def __init__(self, user_agents=None, delay=1, timeout=10, retries=3, verify_ssl=True, backoff=2):
         self.retries = retries
         self.delay = delay
         self.timeout = timeout
@@ -37,6 +37,7 @@ class Downloader:
         ]
         self.current_agent_index = 0
         self.verify_ssl = verify_ssl
+        self.backoff = backoff
 
     def get_user_agent(self):
         # Rotate user agents to prevent being blocked
@@ -48,14 +49,25 @@ class Downloader:
         headers = {"User-Agent": self.get_user_agent()}
         for attempt in range(self.retries):
             try:
-                response = requests.get(url, headers=headers, allow_redirects=True, timeout=self.timeout, verify=self.verify_ssl)
+                response = requests.get(url, headers=headers, allow_redirects=True, timeout=self.timeout,
+                                        verify=self.verify_ssl)
                 response.raise_for_status()
                 time.sleep(self.delay)  # Rate limiting
                 return response.text
+            except requests.exceptions.HTTPError as e:
+                print(f"HTTP error on attempt {attempt + 1} for {url}: {e.response.status_code} - {e.response.reason}")
+            except requests.exceptions.Timeout:
+                print(f"Timeout on attempt {attempt + 1} for {url}")
+            except requests.exceptions.TooManyRedirects:
+                print(f"Too many redirects for {url}")
+                break  # No point in retrying
+            except requests.exceptions.SSLError as e:
+                print(f"SSL error on attempt {attempt + 1} for {url}: {e}")
             except requests.exceptions.RequestException as e:
-                print(f"Attempt {attempt + 1}: Failed to fetch {url} - {e}")
-                time.sleep(self.delay)
-        raise Exception(f"Failed to fetch {url} after {self.retries} attempts.")
+                print(f"Request failed on attempt {attempt + 1} for {url}: {e}")
+            time.sleep(self.delay)
+        print(f"Failed to fetch {url} after {self.retries} attempts.")
+        return None
 
     def fetch_links(self, url, link_selector='a[href]'):
         html = self.fetch(url)
@@ -66,20 +78,20 @@ class Downloader:
         return links
 
 
-if __name__ == "__main__":
-    downloader = Downloader(verify_ssl=False)  # Disable SSL verification for testing
-    start_url = 'https://www.livemint.com'
-
-    # Fetch HTML content of the page
-    try:
-        html_content = downloader.fetch(start_url)
-        print("Page HTML Content:")
-        print(html_content[:])  # Print first 500 characters of the HTML
-
-        # Fetch links from the page
-        links = downloader.fetch_links(start_url)
-        print("\nExtracted Links:")
-        for link in links:
-            print(link)
-    except Exception as e:
-        print(f"Error: {e}")
+# if __name__ == "__main__":
+#     downloader = Downloader(verify_ssl=False)  # Disable SSL verification for testing
+#     start_url = 'https://www.livemint.com'
+#
+#     # Fetch HTML content of the page
+#     try:
+#         html_content = downloader.fetch(start_url)
+#         print("Page HTML Content:")
+#         print(html_content[:])  # Print first 500 characters of the HTML
+#
+#         # Fetch links from the page
+#         links = downloader.fetch_links(start_url)
+#         print("\nExtracted Links:")
+#         for link in links:
+#             print(link)
+#     except Exception as e:
+#         print(f"Error: {e}")
