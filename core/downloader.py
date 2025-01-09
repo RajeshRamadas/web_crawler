@@ -23,7 +23,7 @@ from urllib.parse import urljoin
 import time
 import random
 from bs4 import BeautifulSoup
-
+import logging
 
 class Downloader:
     def __init__(self, user_agents=None, delay=1, timeout=10, retries=3, verify_ssl=True, backoff=2):
@@ -55,18 +55,18 @@ class Downloader:
                 time.sleep(self.delay)  # Rate limiting
                 return response.text
             except requests.exceptions.HTTPError as e:
-                print(f"HTTP error on attempt {attempt + 1} for {url}: {e.response.status_code} - {e.response.reason}")
+                logging.warning(f"HTTP error on attempt {attempt + 1} for {url}: {e.response.status_code} - {e.response.reason}")
             except requests.exceptions.Timeout:
-                print(f"Timeout on attempt {attempt + 1} for {url}")
+                logging.warning(f"Timeout on attempt {attempt + 1} for {url}")
             except requests.exceptions.TooManyRedirects:
-                print(f"Too many redirects for {url}")
+                logging.warning(f"Too many redirects for {url}")
                 break  # No point in retrying
             except requests.exceptions.SSLError as e:
-                print(f"SSL error on attempt {attempt + 1} for {url}: {e}")
+                logging.warning(f"SSL error on attempt {attempt + 1} for {url}: {e}")
             except requests.exceptions.RequestException as e:
-                print(f"Request failed on attempt {attempt + 1} for {url}: {e}")
+                logging.warning(f"Request failed on attempt {attempt + 1} for {url}: {e}")
             time.sleep(self.delay)
-        print(f"Failed to fetch {url} after {self.retries} attempts.")
+        logging.error(f"Failed to fetch {url} after {self.retries} attempts.")
         return None
 
     def fetch_links(self, url, link_selector='a[href]'):

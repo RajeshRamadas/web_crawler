@@ -41,22 +41,37 @@ from db.storage import Storage
 import argparse
 import warnings
 from urllib3.exceptions import InsecureRequestWarning
+import logging
 
 # Suppress SSL warnings (not recommended for production environments)
 warnings.simplefilter('ignore', InsecureRequestWarning)
 
 class Scheduler:
     def __init__(self, seed_urls, max_threads=5, db_path=None, storage_dir=None):
-        self.downloader = Downloader(verify_ssl=False)  # Disable SSL verification (not for production)
+        self.downloader = Downloader(verify_ssl=False)
         self.frontier = Frontier()
         self.robots_handler = RobotsHandler()
         self.max_threads = max_threads
         self.lock = threading.Lock()
 
-        # Set up timestamped storage directory
+        # Set up timestamped storage directory outside the core folder
+        base_crawled_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../crawled"))
         self.timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-        self.storage_dir = storage_dir or os.path.join("crawled", self.timestamp)
+        self.storage_dir = storage_dir or os.path.join(base_crawled_dir, self.timestamp)
         os.makedirs(self.storage_dir, exist_ok=True)
+
+        # Set up the log file inside the storage directory
+        log_file_path = os.path.join(self.storage_dir, f"crawler_{self.timestamp}.log")
+
+        # Configure logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[
+                logging.FileHandler(log_file_path),  # Save logs to a file inside the crawled folder
+                logging.StreamHandler()  # Display logs in the console
+            ]
+        )
 
         # Set up database path
         self.db_path = db_path or os.path.join(self.storage_dir, "crawled_data.db")
@@ -87,10 +102,10 @@ class Scheduler:
                 break  # Exit if no URLs are left
 
             if not self.robots_handler.is_allowed(next_url):
-                print(f"Blocked by robots.txt: {next_url}")
+                logging.info(f"Blocked by robots.txt: {next_url}")
                 continue
 
-            print(f"Fetching: {next_url}")
+            logging.info(f"Fetching: {next_url}")
             try:
                 html = self.downloader.fetch(next_url)
                 if html:
@@ -102,6 +117,7 @@ class Scheduler:
                         "structured_data": structured_data,
                         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
                     }
+                    self.save_content(next_url, content)  # Save the content to a .txt file
                     self.storage.save_content(next_url, content, metadata)
 
                     # Add new links to the frontier
@@ -110,7 +126,7 @@ class Scheduler:
                             self.frontier.add_url(link)
 
             except Exception as e:
-                print(f"Error while processing {next_url}: {e}")
+                logging.error(f"Error while processing {next_url}: {e}")
 
     def save_content(self, url, content):
         # Generate a safe filename from the URL

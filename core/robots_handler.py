@@ -1,6 +1,7 @@
 import requests
 from urllib.parse import urljoin, urlparse
 import time
+import logging
 
 class RobotsHandler:
     def __init__(self, refresh_interval=3600):
@@ -17,6 +18,7 @@ class RobotsHandler:
         current_time = time.time()
         if domain in self.robots_cache and (current_time - self.cache_timestamps[domain] < self.refresh_interval):
             # Use cached rules if still fresh
+            logging.debug(f"Using cached robots.txt for {domain}")
             return
 
         try:
@@ -24,13 +26,14 @@ class RobotsHandler:
             if response.status_code == 200:
                 # Limit size to prevent overly large robots.txt issues
                 if int(response.headers.get('Content-Length', 0)) > 1_000_000:  # 1 MB limit
-                    print(f"Skipping large robots.txt for {domain}")
+                    logging.warning(f"Skipping large robots.txt for {domain}")
                     robots_text = ""
                 else:
                     robots_text = response.text
             else:
                 robots_text = ""
-        except requests.RequestException:
+        except requests.RequestException as e:
+            logging.warning(f"Failed to fetch robots.txt for {domain}: {e}")
             robots_text = ""
 
         # Cache robots.txt and update timestamp
