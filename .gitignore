@@ -19,6 +19,7 @@ venv/
 # wheel build folders to ignore
 build/
 dist/
+crawled/
 *.egg-info/
 
 

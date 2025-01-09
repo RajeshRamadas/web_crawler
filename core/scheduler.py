@@ -31,29 +31,40 @@ Extend RobotsHandler to refresh cached robots.txt periodically for long-running 
 
 import threading
 import os
+import time
 from urllib.parse import urlparse, quote
 from downloader import Downloader
 from frontier import Frontier
 from parser import Parser
 from robots_handler import RobotsHandler
-import time
+from db.storage import Storage
+import argparse
+import warnings
+from urllib3.exceptions import InsecureRequestWarning
 
+# Suppress SSL warnings (not recommended for production environments)
+warnings.simplefilter('ignore', InsecureRequestWarning)
 
 class Scheduler:
-    def __init__(self, seed_urls, max_threads=5):
-        self.downloader = Downloader()
+    def __init__(self, seed_urls, max_threads=5, db_path=None, storage_dir=None):
+        self.downloader = Downloader(verify_ssl=False)  # Disable SSL verification (not for production)
         self.frontier = Frontier()
         self.robots_handler = RobotsHandler()
         self.max_threads = max_threads
         self.lock = threading.Lock()
 
-        # Initialize with seed URLs
+        # Set up timestamped storage directory
+        self.timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+        self.storage_dir = storage_dir or os.path.join("crawled", self.timestamp)
+        os.makedirs(self.storage_dir, exist_ok=True)
+
+        # Set up database path
+        self.db_path = db_path or os.path.join(self.storage_dir, "crawled_data.db")
+        self.storage = Storage(db_path=self.db_path, storage_dir=self.storage_dir)
+
+        # Initialize frontier with seed URLs
         for url in seed_urls:
             self.frontier.add_url(url)
-
-        # Ensure output directory exists
-        if not os.path.exists("crawled"):
-            os.makedirs("crawled")
 
     def crawl(self):
         threads = []
@@ -62,18 +73,18 @@ class Scheduler:
             t.start()
             threads.append(t)
 
-        # Wait for all threads to complete
+        # Wait for all threads to finish
         for t in threads:
             t.join()
 
     def worker(self):
         while True:
-            # Fetch the next URL to crawl
+            # Get the next URL to crawl
             with self.lock:
                 next_url = self.frontier.get_next_url()
 
             if not next_url:
-                break  # Exit if no URLs left
+                break  # Exit if no URLs are left
 
             if not self.robots_handler.is_allowed(next_url):
                 print(f"Blocked by robots.txt: {next_url}")
@@ -84,19 +95,16 @@ class Scheduler:
                 html = self.downloader.fetch(next_url)
                 if html:
                     parser = Parser(next_url)
-                    result = parser.parse(html)
+                    links, content, structured_data = parser.parse(html)
 
-                    # Handle parse result
-                    if len(result) >= 2:
-                        links, content = result[:2]
-                        self.save_content(next_url, content)
+                    # Save content and structured data to storage
+                    metadata = {"structured_data": structured_data}
+                    self.storage.save_content(next_url, content, metadata)
 
-                        # Add new links to the frontier
-                        with self.lock:
-                            for link in links:
-                                self.frontier.add_url(link)
-                    else:
-                        print(f"Parser returned unexpected result: {result}")
+                    # Add new links to the frontier
+                    with self.lock:
+                        for link in links:
+                            self.frontier.add_url(link)
 
             except Exception as e:
                 print(f"Error while processing {next_url}: {e}")
@@ -109,7 +117,7 @@ class Scheduler:
             sanitized_path += "_" + quote(parsed_url.query, safe="_")
 
         filename = f"{sanitized_path}.txt"
-        filepath = os.path.join("crawled", filename)
+        filepath = os.path.join(self.storage_dir, filename)
 
         try:
             with open(filepath, "w", encoding="utf-8") as file:
@@ -118,10 +126,23 @@ class Scheduler:
         except Exception as e:
             print(f"Error saving content for {url}: {e}")
 
-
 if __name__ == "__main__":
-    seed_urls = ["https://www.livemint.com/"]
-    scheduler = Scheduler(seed_urls, max_threads=3)
+    seed_urls = ["https://www.livemint.com"]
+    scheduler = Scheduler(seed_urls, max_threads=1)
     start_time = time.time()
     scheduler.crawl()
     print(f"Crawling completed in {time.time() - start_time:.2f} seconds.")
+
+
+    # parser = argparse.ArgumentParser(description="Web Crawler Scheduler")
+    # parser.add_argument("--seed_urls", nargs="+", required=True, help="List of seed URLs to start crawling")
+    # parser.add_argument("--max_threads", type=int, default=5, help="Maximum number of threads for crawling")
+    # parser.add_argument("--db_path", type=str, help="Path to the database file")
+    # parser.add_argument("--storage_dir", type=str, help="Directory to store crawled content")
+    # args = parser.parse_args()
+    #
+    # scheduler = Scheduler(seed_urls=args.seed_urls, max_threads=args.max_threads, db_path=args.db_path, storage_dir=args.storage_dir)
+    #
+    # start_time = time.time()
+    # scheduler.crawl()
+    # print(f"Crawling completed in {time.time() - start_time:.2f} seconds.")

@@ -48,7 +48,7 @@ class Downloader:
         headers = {"User-Agent": self.get_user_agent()}
         for attempt in range(self.retries):
             try:
-                response = requests.get(url, headers=headers, timeout=self.timeout, verify=self.verify_ssl)
+                response = requests.get(url, headers=headers, allow_redirects=True, timeout=self.timeout, verify=self.verify_ssl)
                 response.raise_for_status()
                 time.sleep(self.delay)  # Rate limiting
                 return response.text
